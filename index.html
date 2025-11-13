@@ -5,27 +5,20 @@
     <title>Lompat Tangga - Freminet</title>
     <style>
         body {
-            /* PENGATURAN BACKGROUND DIPINDAHKAN KE SINI */
+            /* HANYA WARNA FALLBACK DAN POSISI TENGAH */
             margin: 0;
             display: flex;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
-            
-            /* Background yang seharusnya dimuat */
-            background-image: url('unduhan (1).jpg'); 
-            background-size: cover; /* Pastikan gambar mengisi seluruh layar */
-            background-position: center;
-            background-repeat: no-repeat;
-            
-            /* Fallback warna jika gambar gagal dimuat */
-            background-color: #333; 
+            background-color: #333; /* Warna di luar canvas */
         }
         canvas {
             display: block;
             margin: 0 auto;
             border: 5px solid #fff; /* Bingkai Putih */
-            background-color: rgba(255, 255, 255, 0.1); /* Sedikit transparan agar BG terlihat */
+            /* Canvas tidak transparan lagi, karena dia akan menggambar BG */
+            background-color: #000; 
         }
     </style>
 </head>
@@ -40,7 +33,9 @@
         var charImg = new Image();
         charImg.src = "Freminet-removebg-preview.png"; // Karakter
         
-        // Catatan: Gambar Background sekarang diatur di CSS Body
+        // --- BACKGROUND KEMBALI DI JS ---
+        var bgImg = new Image();
+        bgImg.src = "unduhan (1).jpg"; // Ganti nama file ini jika perlu!
 
         // --- Variabel Game State dan Win Condition ---
         var score = 0;
@@ -96,11 +91,18 @@
 
         // --- Fungsi Draw (Gambar) ---
         function draw() {
-            // 1. Membersihkan Canvas (Tidak perlu gambar BG karena sudah di body CSS)
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            // 1. Gambar Background (SEKARANG MENGGAMBAR BG DI DALAM CANVAS)
+            if (bgImg.complete && bgImg.naturalWidth !== 0) {
+                // Menggambar BG seukuran CANVAS (400x600)
+                ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height); 
+            } else {
+                // Fallback warna canvas jika gambar BG gagal dimuat
+                ctx.fillStyle = "#87CEEB"; 
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
 
-            // 2. Gambar Platform/Tangga (Warna Kontras Baru)
-            ctx.fillStyle = "#A0522D"; // Saddle Brown
+            // 2. Gambar Platform/Tangga
+            ctx.fillStyle = "#A0522D"; 
             platforms.forEach(function(p) {
                 ctx.fillRect(p.x, p.y, p.width, p.height);
             });
@@ -116,7 +118,7 @@
 
             // 4. Gambar Score
             ctx.font = "20px Arial";
-            ctx.fillStyle = "#FFF"; // Warna putih agar terlihat jelas
+            ctx.fillStyle = "#FFF"; 
             ctx.fillText("Score: " + score, 10, 30);
             
             // 5. Gambar Status Game
@@ -125,7 +127,7 @@
             }
         }
         
-        // ... (Fungsi drawGameStateOverlay dan update tetap sama) ...
+        // ... (drawGameStateOverlay dan update sama) ...
         
         function drawGameStateOverlay() {
             ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
@@ -205,24 +207,28 @@
             requestAnimationFrame(loop);
         }
 
-        // Mulai setelah karakter dimuat
-        charImg.onload = loop; 
+        // Pemuatan Aset
+        var imagesLoaded = 0;
+        var totalImages = 2; 
+
+        function imageLoaded() {
+            imagesLoaded++;
+            if (imagesLoaded === totalImages) {
+                loop(); // Mulai loop setelah KEDUA gambar dimuat
+            }
+        }
+
+        charImg.onload = imageLoaded;
+        bgImg.onload = imageLoaded;
         
-        // PENTING: Jika gambar karakter gagal dimuat, kita tetap coba memulai loop
         charImg.onerror = function() { 
-            console.error("Gagal memuat gambar karakter: Freminet-removebg-preview.png. Memulai game dengan karakter kotak merah."); 
-            loop(); 
+            console.error("Gagal memuat karakter."); 
+            imageLoaded(); 
         };
-        
-        // Kita tidak perlu menunggu gambar background karena sudah di CSS
-        // Tapi kita tambahkan event listener untuk background just in case
-        document.addEventListener('DOMContentLoaded', function() {
-            var bgCheck = new Image();
-            bgCheck.onerror = function() {
-                console.warn("Gagal memuat background di CSS (unduhan.jpg).");
-            };
-            bgCheck.src = 'unduhan.jpg';
-        });
+        bgImg.onerror = function() { 
+            console.error("Gagal memuat background."); 
+            imageLoaded(); 
+        };
 
     </script>
 </body>
