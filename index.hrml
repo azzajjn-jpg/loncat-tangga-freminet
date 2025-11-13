@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Lompat Tangga - Freminet</title>
+    <style>
+        body {
+            /* PENGATURAN BACKGROUND DIPINDAHKAN KE SINI */
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            
+            /* Background yang seharusnya dimuat */
+            background-image: url('unduhan.jpg'); 
+            background-size: cover; /* Pastikan gambar mengisi seluruh layar */
+            background-position: center;
+            background-repeat: no-repeat;
+            
+            /* Fallback warna jika gambar gagal dimuat */
+            background-color: #333; 
+        }
+        canvas {
+            display: block;
+            margin: 0 auto;
+            border: 5px solid #fff; /* Bingkai Putih */
+            background-color: rgba(255, 255, 255, 0.1); /* Sedikit transparan agar BG terlihat */
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas" width="400" height="600"></canvas>
+    
+    <script>
+        var canvas = document.getElementById("gameCanvas");
+        var ctx = canvas.getContext("2d");
+        
+        // --- Variabel Gambar ---
+        var charImg = new Image();
+        charImg.src = "Freminet-removebg-preview.png"; // Karakter
+        
+        // Catatan: Gambar Background sekarang diatur di CSS Body
+
+        // --- Variabel Game State dan Win Condition ---
+        var score = 0;
+        var WIN_SCORE = 20; 
+        var gameState = "running"; 
+
+        // --- Player ---
+        var player = {
+            x: 175,
+            y: 500,
+            width: 50,
+            height: 50,
+            vy: 0,
+            gravity: 0.5,
+            jumpStrength: -10,
+            onGround: false
+        };
+
+        // --- Platform/Tangga ---
+        var platforms = [];
+        function initializePlatforms() {
+            platforms = [];
+            for (var i = 0; i < 8; i++) {
+                platforms.push({
+                    x: Math.random() * 320,
+                    y: i * 75 + 50,
+                    width: 80,
+                    height: 15
+                });
+            }
+        }
+        initializePlatforms(); 
+
+        // --- Kontrol ---
+        var keys = {};
+        document.addEventListener("keydown", function(e) { 
+            keys[e.key] = true; 
+            if ((gameState === "gameOver" || gameState === "win") && e.key === "Enter") {
+                resetGame();
+            }
+        });
+        document.addEventListener("keyup", function(e) { keys[e.key] = false; });
+
+        // --- Fungsi Reset Game ---
+        function resetGame() {
+            player.x = 175;
+            player.y = 500;
+            player.vy = 0;
+            score = 0;
+            initializePlatforms();
+            gameState = "running";
+        }
+
+        // --- Fungsi Draw (Gambar) ---
+        function draw() {
+            // 1. Membersihkan Canvas (Tidak perlu gambar BG karena sudah di body CSS)
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 2. Gambar Platform/Tangga (Warna Kontras Baru)
+            ctx.fillStyle = "#A0522D"; // Saddle Brown
+            platforms.forEach(function(p) {
+                ctx.fillRect(p.x, p.y, p.width, p.height);
+            });
+
+            // 3. Gambar Player
+            if (charImg.complete && charImg.naturalWidth !== 0) {
+                 ctx.drawImage(charImg, player.x, player.y, player.width, player.height);
+            } else {
+                 // Fallback: Kotak merah jika karakter gagal dimuat
+                 ctx.fillStyle = "#FF0000"; 
+                 ctx.fillRect(player.x, player.y, player.width, player.height);
+            }
+
+            // 4. Gambar Score
+            ctx.font = "20px Arial";
+            ctx.fillStyle = "#FFF"; // Warna putih agar terlihat jelas
+            ctx.fillText("Score: " + score, 10, 30);
+            
+            // 5. Gambar Status Game
+            if (gameState !== "running") {
+                drawGameStateOverlay();
+            }
+        }
+        
+        // ... (Fungsi drawGameStateOverlay dan update tetap sama) ...
+        
+        function drawGameStateOverlay() {
+            ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.textAlign = "center";
+            
+            if (gameState === "gameOver") {
+                ctx.font = "40px Arial";
+                ctx.fillStyle = "#FF4444";
+                ctx.fillText("GAME OVER", canvas.width / 2, canvas.height / 2 - 20);
+                ctx.font = "20px Arial";
+                ctx.fillStyle = "#FFFFFF";
+                ctx.fillText("Skor Akhir: " + score, canvas.width / 2, canvas.height / 2 + 20);
+                ctx.fillText("Tekan [Enter] untuk Mulai Lagi", canvas.width / 2, canvas.height / 2 + 50);
+            } else if (gameState === "win") {
+                ctx.font = "40px Arial";
+                ctx.fillStyle = "#44FF44";
+                ctx.fillText("YOU WIN!", canvas.width / 2, canvas.height / 2 - 20);
+                ctx.font = "20px Arial";
+                ctx.fillStyle = "#FFFFFF";
+                ctx.fillText("Skor Anda: " + score, canvas.width / 2, canvas.height / 2 + 20);
+                ctx.fillText("Tekan [Enter] untuk Mulai Lagi", canvas.width / 2, canvas.height / 2 + 50);
+            }
+            ctx.textAlign = "left"; 
+        }
+
+        function update() {
+            if (gameState !== "running") return; 
+
+            if (keys["ArrowLeft"]) player.x -= 5;
+            if (keys["ArrowRight"]) player.x += 5;
+
+            if (player.x < 0) player.x = 0;
+            if (player.x + player.width > canvas.width) player.x = canvas.width - player.width;
+
+            player.vy += player.gravity;
+            player.y += player.vy;
+
+            player.onGround = false;
+            platforms.forEach(function(p) {
+                if (player.vy > 0 &&
+                    player.x + player.width > p.x &&
+                    player.x < p.x + p.width &&
+                    player.y + player.height > p.y &&
+                    player.y + player.height < p.y + p.height + player.vy) {
+                    player.vy = player.jumpStrength;
+                    player.onGround = true;
+                    score += 1;
+                    
+                    if (score >= WIN_SCORE) {
+                        gameState = "win";
+                    }
+                }
+            });
+
+            if (player.y < 250) {
+                player.y += 5;
+                platforms.forEach(function(p) {
+                    p.y += 5;
+                    if (p.y > canvas.height) {
+                        p.y = Math.random() * -40;
+                        p.x = Math.random() * 320;
+                    }
+                });
+            }
+
+            if (player.y > canvas.height) {
+                gameState = "gameOver";
+            }
+        }
+
+
+        // --- Loop Game ---
+        function loop() {
+            update();
+            draw();
+            requestAnimationFrame(loop);
+        }
+
+        // Mulai setelah karakter dimuat
+        charImg.onload = loop; 
+        
+        // PENTING: Jika gambar karakter gagal dimuat, kita tetap coba memulai loop
+        charImg.onerror = function() { 
+            console.error("Gagal memuat gambar karakter: Freminet-removebg-preview.png. Memulai game dengan karakter kotak merah."); 
+            loop(); 
+        };
+        
+        // Kita tidak perlu menunggu gambar background karena sudah di CSS
+        // Tapi kita tambahkan event listener untuk background just in case
+        document.addEventListener('DOMContentLoaded', function() {
+            var bgCheck = new Image();
+            bgCheck.onerror = function() {
+                console.warn("Gagal memuat background di CSS (unduhan.jpg).");
+            };
+            bgCheck.src = 'unduhan.jpg';
+        });
+
+    </script>
+</body>
+</html>
